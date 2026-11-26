@@ -458,6 +458,7 @@ button.warnbtn{background:var(--warn);border-color:var(--warn);color:var(--paper
       <h3>✅ Collecting and checking work</h3>
       <ul class="tplist">
         <li>Students press <b>⬇ Save</b> in the 📓 Mission Log to download their log, then hand it in on Toddle.</li>
+        <li>Or press <b>🖨️ Make a worksheet</b> (in the 📓 Mission Log or under the check at the bottom): a printable worksheet that gathers their planet, their working, the analyst check, the lab report, their <b>So what?</b> answers and a feedback page. Students choose <b>Save as PDF</b> and upload it to Toddle as evidence of learning.</li>
         <li><b>⭐ Stars left</b> show how independently a planet was completed (hints cost stars). <b>🚀 XP</b> and rank show overall effort.</li>
         <li><b>Real planets</b> (☀️ Our Solar System) are ideal for modelling and practice. They earn no XP, and their names are locked.</li>
         <li>Everything is saved <b>in the browser on that laptop</b>. A different laptop or a cleared browser starts fresh, so have students save their Mission Log at the end of each lesson.</li>
@@ -526,6 +527,7 @@ button.warnbtn{background:var(--warn);border-color:var(--warn);color:var(--paper
     <div class="cmps" id="compare"></div>
     <p class="lede" id="swlede" style="margin:0"><b>Step 2: So what?</b> (What does this mean for the planet?) Pick <b>2</b> of these questions and answer them on your Mission Log (the Analyst page). Use what you know from this unit, and the pictures above. Stuck? Use the 🤔 Think about… clues on the OneNote page.</p>
     <ol class="sowhat" id="sowhat"></ol>
+    <div class="actions" style="margin-top:14px"><button class="primary" data-makews>🖨️ Make a worksheet</button><span class="mnote" style="align-self:center">Gathers your planet, your working, the check, the lab report and your answers into a PDF worksheet you can upload to Toddle.</span></div>
   </section>
 
   <section class="quick" id="quickdice" aria-label="Quick dice"><div class="fhead"><h2>Any die</h2><button class="small ghost foldbtn" data-fold="dice">▾ Hide</button></div><button class="small" data-q="6">d6</button><button class="small" data-q="8">d8</button><button class="small" data-q="12">d12</button><button class="small" data-q="20">d20</button><div class="qface" id="qface" aria-live="polite">–</div></section>
@@ -539,7 +541,7 @@ button.warnbtn{background:var(--warn);border-color:var(--warn);color:var(--paper
 <aside class="logdock" id="logdock" aria-label="Mission Log">
   <button class="logtab" id="logtab" aria-expanded="false" aria-controls="logpanel"><span id="logarrow" aria-hidden="true">◀</span><span class="lt">📓 Mission Log</span><span class="lc" id="logcount">0/9</span></button>
   <div class="logpanel" id="logpanel">
-    <div class="loghead"><h2>📓 Mission Log</h2><button class="small ghost" data-clearcalc title="Clear the calculations on this planet">🧹 Clear</button><button class="small ghost" id="logsave" title="Download a copy of this log">⬇ Save</button><button class="small ghost" id="logclose" aria-label="Close the log">Close ▶</button></div>
+    <div class="loghead"><h2>📓 Mission Log</h2><button class="small ghost" data-clearcalc title="Clear the calculations on this planet">🧹 Clear</button><button class="small ghost" id="logws" title="Make a printable worksheet of your finished work (save it as a PDF for Toddle)">🖨️ Worksheet</button><button class="small ghost" id="logsave" title="Download a copy of this log">⬇ Save</button><button class="small ghost" id="logclose" aria-label="Close the log">Close ▶</button></div>
     <div class="logtabs" role="tablist"><button role="tab" data-ltab="disc">🔭 Researcher</button><button role="tab" data-ltab="rep">🔍 Analyst</button></div>
     <div class="logbody" id="logbody"></div>
   </div>
@@ -1278,6 +1280,142 @@ document.getElementById('logbody').addEventListener('input',e=>{const el=e.targe
 document.getElementById('logbody').addEventListener('change',e=>{if(e.target.hasAttribute('data-rerender'))renderLog()});
 document.getElementById('pname').addEventListener('input',()=>{const p=document.querySelector('[data-pname]');if(p)p.value=G.name||''});
 syncLog();renderLog();
+
+// ================= WORKSHEET: printable evidence of learning =================
+const wsGap=w=>'<span class="gap" style="width:'+w+'px"></span>';
+const wsInk=v=>'<span class="ink">'+esc(v)+'</span>';
+const wsFilled=(v,w)=>String(v==null?'':v).trim()?wsInk(String(v).trim()):wsGap(w);
+function wsDiscRows(){
+  const s=S(),d=D(),t=typeOf(),a=atmOf(),o=orbitOf(),mc=moonCount(),q='—';
+  const rows=[
+    ['① Distance from its star',s.dist||q,d?d.au:q],
+    ['② Planet type','decided by you',t?t.name:q],
+    ['③ Air',isGiant()?'— (giant)':(s.atm||q),a?a.name+' (+'+a.add+' °C warming)':q],
+    ['④ Tilt',s.tilt||q,s.tilt?TILT[s.tilt-1]+'°':q],
+    ['⑤ Orbit shape',s.orbit||q,o?o.n:q],
+    ['⑥ Moons',s.moons||q,s.moons?(mc===0?'No moons':mc+' moon'+(mc>1?'s':'')+(mc?' · moon orbit tilt '+moonTilt()+'°':'')):q]];
+  (s.moonRolls||[]).forEach((m,j)=>{const I=moonInfo(m);rows.push(['Moon '+'ABCDE'[j],m,I.sz+', '+I.where+' · '+I.pts+' tide pts'])});
+  rows.push(['⑦ Made of',s.subs?s.subs.join(', '):q,s.subs?s.subs.map(x=>SUB[x-1].n).join(', '):q]);
+  return rows;
+}
+function worksheetHTML(){
+  const L=LG(),s=S(),d=D(),t=typeOf(),o=orbitOf(),T=currentT(),giant=isGiant(),circ=o&&o.k===0,solo=SOLO();
+  const items=complete()?analystItems():[];
+  const resolvedN=items.filter(w=>resolved(w.k)).length;
+  const subs=s.subs||[],LL=LB();
+  const labDone=subs.filter(x=>LL.res[x]&&LL.res[x].right).length;
+  const swAns=[1,2].filter(i=>String(lv('sw'+i+'a')).trim()).length;
+  const briefN=['b1','b2','b3','b4','b5','b6'].filter(k=>String(L[k]==null?'':L[k]).trim()).length;
+  const dateStr=new Date().toLocaleDateString('en-GB');
+  const steps=[
+    ['Discovered all 7 features of the planet',complete()],
+    ['Work it out: '+resolvedN+' of '+(items.length||'—')+' numbers checked correct',items.length>0&&resolvedN===items.length],
+    ['Lab report: '+labDone+' of '+(subs.length||'—')+' substances recorded correctly',subs.length>0&&labDone===subs.length],
+    ['So what? questions answered: '+swAns+' of 2',swAns===2],
+    ['Briefing script written',briefN>=5]];
+  const allDone=steps.every(x=>x[1]);
+  // ---- Part B: work it out (the thinking maths, in the student's own numbers) ----
+  const calc=[['Final temperature',wsFilled(lv('t_dist'),70)+' °C + '+wsFilled(lv('t_air'),60)+' °C = '+wsFilled(lv('t_res'),70)+' °C']];
+  if(!circ)calc.push(['Closest point',wsFilled(lv('c_dist'),70)+' °C + '+wsFilled(lv('c_air'),60)+' °C = '+wsFilled(lv('c_res'),70)+' °C'],
+    ['Farthest point',wsFilled(lv('f_dist'),70)+' °C + '+wsFilled(lv('f_air'),60)+' °C = '+wsFilled(lv('f_res'),70)+' °C']);
+  calc.push(['Year length',wsFilled(lv('year'),120)],
+    ['Orbital speed',wsFilled(lv('speed'),70)+' km/s'],
+    ['Moon tide points',((s.moonRolls||[]).length?(s.moonRolls||[]).map((_,j)=>wsFilled(lv('m'+'ABCDE'[j]),34)).join(' + ')+' = ':'No moons: ')+wsFilled(lv('m_tot'),50)],
+    ['Star tide points',wsFilled(lv('star'),50)]);
+  if(!giant)calc.push(['Spring tide','moon points + star points = '+wsFilled(lv('spring'),50)],
+    ['Neap tide','bigger number − smaller number = '+wsFilled(lv('neap'),50)]);
+  // ---- Part C: analyst check / self-check ----
+  const checkRows=items.map(w=>{const r=G.RES[w.k],said=lv(LOGMAP[w.k]);
+    const verdict=r?(r.right?'✓ Correct':(r.fixed?'✓ Fixed':'✗ Not correct yet')):'not checked';
+    const fix=r&&!r.right&&r.fixed?wsFilled(G.FIX[w.k],70):(r&&!r.right?wsGap(70):'—');
+    return '<tr><th>'+w.label+'</th><td>'+(String(said).trim()?wsInk(said)+(w.k==='year'?'':' '+w.unit):'<span class="missing">blank</span>')+'</td><td>'+verdict+'</td><td>'+fix+'</td></tr>'}).join('');
+  // ---- Part D: lab report ----
+  const labRows=subs.map(x=>{const r=LL.res[x];
+    const state=r&&r.right?wsInk(LL.ans[x])+' ✓':(LL.tested[x]?'<span class="missing">tested, not recorded correctly yet</span>':'<span class="missing">not tested yet</span>');
+    return '<tr><th>'+SUB[x-1].n+'</th><td>at '+(T===null?'the final temperature':fmtT(T))+' it is a…</td><td>'+state+'</td></tr>'}).join('');
+  const ocean=(typeof labReportDone==='function'&&complete()&&labReportDone()&&oceanNow()!==null&&oceanNow())?'<p class="note">🌊 At this temperature the planet could have oceans of liquid '+esc(oceanNow())+'.</p>':'';
+  // ---- Part E: so what ----
+  const swBlock=i=>{const n=+L['sw'+i+'q']||0;
+    if(!n)return '<div class="swq"><b>So what? question '+i+':</b> <span class="missing">not chosen yet</span></div>';
+    return '<div class="swq"><b>Question '+n+': '+esc(SOWHAT[n-1][0])+'</b><p class="q">'+esc(SOWHAT[n-1][1])+'</p><p class="ans">'+wsFilled(lv('sw'+i+'a'),400)+'</p></div>'};
+  // ---- Part F: briefing script ----
+  const brief='“Introducing '+wsFilled(L.b1==null||!String(L.b1).trim()?(G.name||''):L.b1,90)+', found by '+wsFilled(L.b2==null||!String(L.b2).trim()?(L.rname||''):L.b2,90)+'. It is a '+wsFilled(L.b3==null||!String(L.b3).trim()?(t?t.name.toLowerCase():''):L.b3,90)+', '+wsFilled(L.b4==null||!String(L.b4).trim()?(d?d.au:''):L.b4,90)+' from its star.<br>This means '+wsFilled(L.b5,240)+'.<br>The most surprising thing about it is '+wsFilled(L.b6,240)+'.”';
+  // ---- feedback page ----
+  const fbRows=items.map(w=>{const r=G.RES[w.k];
+    return '<tr><td>'+w.label+'</td><td>'+(r?(r.right?'Correct':'Corrected ✓'):'Not checked')+'</td></tr>';
+    }).join('');
+  const fbLab=subs.map(x=>{const r=LL.res[x];return '<tr><td>Lab: '+SUB[x-1].n+' state</td><td>'+(r&&r.right?'Correct ✓':(LL.tested[x]?'Tested, not recorded':'Not tested'))+'</td></tr>'}).join('');
+  const fbSw=[1,2].map(i=>'<tr><td>So what? question '+i+'</td><td>'+(String(lv('sw'+i+'a')).trim()?'Answered':'Not answered')+'</td></tr>').join('');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>Mission worksheet – '+esc(G.name||'planet')+'</title><style>'
+  +'@page{margin:16mm}'
+  +'body{font:15px/1.55 "Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;color:#1D2822;max-width:700px;margin:0 auto;padding:20px 18px 60px;background:#fff}'
+  +'.bar{position:sticky;top:0;z-index:5;background:#1D2822;color:#fff;padding:12px 16px;display:flex;gap:14px;align-items:center;border-radius:12px;margin-bottom:22px;font-size:14px}'
+  +'.bar button{font:700 15px "Segoe UI",system-ui,sans-serif;background:#2E7D46;color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer}'
+  +'.bar small{opacity:.85;line-height:1.4}'
+  +'@media print{.bar{display:none}body{padding:0}}'
+  +'.eyebrow{font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:#2E7D46}'
+  +'h1{font:800 30px/1.1 "Bricolage Grotesque","Segoe UI",system-ui,sans-serif;margin:4px 0 2px}'
+  +'.sub{color:#5A6B61;margin:0 0 14px}'
+  +'.names{display:flex;gap:26px;flex-wrap:wrap;margin:10px 0 4px;font-weight:700}'
+  +'.ink{color:#1D4ED8;font-weight:600}'
+  +'.gap{display:inline-block;border-bottom:1.5px solid #9AA9A1;height:1em;vertical-align:baseline}'
+  +'.bluenote{color:#1D4ED8;font-size:13px;margin:2px 0 16px}'
+  +'h2{font:800 19px "Bricolage Grotesque","Segoe UI",system-ui,sans-serif;border-bottom:2px solid #2E7D46;padding-bottom:3px;margin:26px 0 10px;break-after:avoid}'
+  +'h3{font:700 16px "Segoe UI",system-ui,sans-serif;margin:16px 0 6px;break-after:avoid}'
+  +'table{border-collapse:collapse;width:100%;margin:6px 0 4px;break-inside:avoid}'
+  +'th,td{border:1px solid #CBD8CE;padding:5px 9px;text-align:left;vertical-align:top}'
+  +'th{background:#F3F6F2;width:38%}'
+  +'.steps{list-style:none;padding:0;margin:6px 0;columns:1}'
+  +'.steps li{margin:2px 0}'
+  +'.missing{color:#A5541C;font-style:italic}'
+  +'.note{color:#5A6B61;font-size:13.5px}'
+  +'.warn{background:#FBE8DA;border:1px solid #A5541C;border-radius:8px;padding:8px 12px;margin:10px 0}'
+  +'.q{color:#5A6B61;font-style:italic;margin:4px 0}'
+  +'.ans{margin:4px 0 14px}'
+  +'.swq{margin:10px 0 16px;break-inside:avoid}'
+  +'.script{border:1.5px solid #CBD8CE;border-radius:10px;padding:12px 16px;font-size:15.5px;line-height:2;break-inside:avoid}'
+  +'.feedback{break-before:page}'
+  +'.sumrow{display:flex;gap:18px;flex-wrap:wrap;font-weight:700;margin:8px 0}'
+  +'.foot{margin-top:34px;color:#5A6B61;font-size:12.5px;border-top:1px solid #CBD8CE;padding-top:8px}'
+  +'</style></head><body>'
+  +'<div class="bar"><button onclick="window.print()">🖨️ Save as PDF / Print</button><small>1. Press <b>Save as PDF</b>. 2. In the print window choose <b>Save as PDF</b> (on an iPad: pinch outwards on the preview, then <b>Save to Files</b>). 3. Upload the PDF to <b>Toddle</b> as your evidence of learning.</small></div>'
+  +'<span class="eyebrow">Planet Dice · WAB Space · Grade 7/8 · Earth in Space</span>'
+  +'<h1>Mission worksheet: '+esc(G.name||'Unnamed planet')+'</h1>'
+  +'<p class="sub">A record of the work you completed in the Planet Dice sim</p>'
+  +'<div class="names"><span>Name: '+(String(lv('rname')).trim()?wsInk(lv('rname')):wsGap(150))+'</span><span>Class: '+wsGap(90)+'</span><span>Date: '+dateStr+'</span>'+(solo?'':(String(lv('aname')).trim()?'<span>Checked by (analyst): '+wsInk(lv('aname'))+'</span>':''))+'</div>'
+  +'<p class="bluenote">Everything printed in blue was written by the student in the sim.</p>'
+  +(allDone?'':'<p class="warn">⚠ Some work is not finished yet — see the checklist below. Finish it in the sim, then make your worksheet again.</p>')
+  +'<h3>Steps completed in the sim</h3><ul class="steps">'+steps.map(x=>'<li>['+(x[1]?'x':' ')+'] '+x[0]+'</li>').join('')+'</ul>'
+  +'<h2>Part A: Your planet</h2><p class="note">Your dice rolls and what they gave you.</p>'
+  +'<table><thead><tr><th>Feature</th><th>Roll</th><th>Result</th></tr></thead><tbody>'+wsDiscRows().map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join('')+'</tbody></table>'
+  +'<h3>Why this planet type?</h3><p class="ans">'+wsFilled(lv('reason'),400)+'</p>'
+  +'<h2>Part B: Work it out</h2><p class="note">The calculations, in your own numbers from the 📖 tables.</p>'
+  +'<table><tbody>'+calc.map(r=>'<tr><th>'+r[0]+'</th><td>'+r[1]+'</td></tr>').join('')+'</tbody></table>'
+  +(String(lv('notes')).trim()?'<h3>Notes</h3><p class="ans">'+wsInk(lv('notes'))+'</p>':'')
+  +'<h2>Part C: '+(solo?'Self-check':'Analyst check')+'</h2><p class="note">Each number was checked by the sim. Errors that were caught and fixed show the corrected number.</p>'
+  +(items.length?'<table><thead><tr><th>Calculation</th><th>You wrote</th><th>Result</th><th>Corrected answer</th></tr></thead><tbody>'+checkRows+'</tbody></table>':'<p class="missing">No checks yet: finish discovering the planet first.</p>')
+  +'<h2>Part D: Lab report</h2><p class="note">Each substance the planet is made of, tested in the Station Lab at the planet’s final temperature.</p>'
+  +(subs.length?'<table><tbody>'+labRows+'</tbody></table>'+ocean:'<p class="missing">No substances to test yet.</p>')
+  +'<h2>Part E: So what?</h2><p class="note">What does all this mean for the planet? Your answers, using what you know from this unit.</p>'
+  +swBlock(1)+swBlock(2)
+  +'<h2>Part F: Briefing script</h2><div class="script">'+brief+'</div>'
+  +'<div class="feedback"><h2>Feedback page</h2>'
+  +'<div class="sumrow"><span>Numbers checked: '+resolvedN+' of '+(items.length||'—')+' correct</span><span>Lab report: '+labDone+' of '+(subs.length||'—')+' substances</span><span>So what?: '+swAns+' of 2 answered</span></div>'
+  +'<div class="sumrow"><span>⭐ Stars left: '+G.stars+' of 5</span><span>🚀 XP earned on this planet: '+G.xp+'</span></div>'
+  +'<p class="note">Stars left show how independently the mission was completed: each hint costs 1 star. XP grows with correct work, caught errors and fixed mistakes.</p>'
+  +'<table><thead><tr><th>Item</th><th>Result</th></tr></thead><tbody>'+fbRows+fbLab+fbSw+'</tbody></table></div>'
+  +'<p class="foot">Made with the Planet Dice sim · WAB Space · '+dateStr+'</p>'
+  +'</body></html>';
+}
+function makeWorksheet(){
+  if(!S().dist){toast('Roll your planet first: the worksheet records the work you have done.');return}
+  const w=window.open('','_blank');
+  if(!w){toast('The worksheet could not open. Allow pop-ups for this page, then try again.');return}
+  try{w.document.open();w.document.write(worksheetHTML());w.document.close()}
+  catch(e){toast('Could not make the worksheet here. Try the offline version.')}
+}
+document.getElementById('logws').onclick=makeWorksheet;
+document.addEventListener('click',e=>{if(e.target.closest('[data-makews]'))makeWorksheet()});
 </script>
 <script>
 // ================= STAR MAP (save / travel to / load planets) =================
@@ -1653,7 +1791,7 @@ const REAL=[
   rows:[['① Distance','Roll 7 → 10 AU','9.5 AU'],['② Type','Gas giant','Gas giant with bright rings of ice'],['③ Air','No air roll','Mostly hydrogen and helium'],['④ Tilt','Roll 5 → 30°','27°'],['⑤ Orbit','Roll 1–3 → Circular','Nearly circular'],['⑥ Moons','5 moons (the game’s limit)','146 moons! Titan is bigger than Mercury'],['⑦ Made of','Ammonia, water','Ammonia clouds, water-ice rings'],['🌡️ Temperature','−185 °C','About −140 °C at the cloud tops']]},
  {key:'uranus',name:'Uranus',au:19.2,e:0.046,col:['#BFE8EF','#5FA8B8'],S:{dist:8,type:'iceg',tilt:8,orbit:1,mcount:5,moons:5,moonRolls:[3,3,4,4,2],mtilt:1,subs:[3,2]},
   rows:[['① Distance','Roll 8 → 30 AU','19 AU: between the 10 and 30 AU rows'],['② Type','Ice giant','Ice giant'],['③ Air','No air roll','Hydrogen, helium and methane'],['④ Tilt','Roll 8 → 90°','98°: it rolls round the Sun on its side'],['⑤ Orbit','Roll 1–3 → Circular','Nearly circular'],['⑥ Moons','5 moons (the game’s limit)','28 moons, named after characters from Shakespeare'],['⑦ Made of','Methane, ammonia','Water, ammonia and methane ices; methane makes it blue-green'],['🌡️ Temperature','−220 °C','About −195 °C at the cloud tops']]},
- {key:'neptune',name:'Neptune',au:30.1,e:0.009,col:['#5B8DEF','#23408E'],S:{dist:8,type:'iceg',tilt:5,orbit:1,mcount:3,moons:5,moonRolls:[4,1,2],mtilt:6,subs:[3,1]},
+ {key:'neptune',name:'Neptune',au:30.1,e:0.009,col:['#5B8DEF','#23408E'],S:{dist:8,type:'iceg',tilt:5,mcount:3,moons:5,moonRolls:[4,1,2],mtilt:6,subs:[3,1]},
   rows:[['① Distance','Roll 8 → 30 AU','30 AU'],['② Type','Ice giant','Ice giant'],['③ Air','No air roll','Hydrogen, helium and methane: the fastest winds'],['④ Tilt','Roll 5 → 30°','28°'],['⑤ Orbit','Roll 1–3 → Circular','Nearly circular'],['⑥ Moons','3 moons: medium size close, small size far, small size close. Orbit tilt 30°','16 moons. Big Triton orbits backwards!'],['⑦ Made of','Methane, water','Water, ammonia and methane ices'],['🌡️ Temperature','−220 °C','About −200 °C at the cloud tops']]}];
 function loadReal(key){const p=REAL.find(x=>x.key===key);if(!p)return;
   let prev=null;try{prev=JSON.parse(localStorage.getItem('pd2real-'+key)||'null')}catch(e){}
